@@ -11,7 +11,13 @@ class SimpleUIPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         layout.label(text="Test description!")
-        layout.operator("mesh.primitive_cube_add", text="Test Button")
+        layout.operator("mesh.primitive_cube_add", text="Test Cube", icon="MESH_CUBE")
+        layout.operator(
+            "mesh.primitive_cylinder_add", text="Test Cylinder", icon="MESH_CYLINDER"
+        )
+        layout.operator(
+            "mesh.primitive_uv_sphere_add", text="Test Cylinder", icon="SPHERE"
+        )
 
 
 def register():
@@ -19,7 +25,7 @@ def register():
 
 
 def unregister():
-    bpy.uti
+    bpy.utils.unregister_class(SimpleUIPanel)
 
 
 if __name__ == "__main__":

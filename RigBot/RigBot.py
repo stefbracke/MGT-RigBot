@@ -1,29 +1,34 @@
 import bpy
+import mathutils
 
 
 class OBJECT_OT_add_bone(bpy.types.Operator):
     """Add a bone at the center of the selected object"""
 
-    bl_idname = "object.add_bone_at_center"
-    bl_label = "Add Bone at Object Center"
+    bl_idname = "object.add_bone_at_median"
+    bl_label = "Add Bone at Median of Vertices"
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
-        if not context:
-            self.report({"WARNING"}, "No context")
-            return {"CANCELLED"}
-        obj = context.active_object
+        selected_objects = context.selected_objects  # type: ignore
 
-        if not obj:
-            self.report({"WARNING"}, "No active object")
+        if not selected_objects:
+            self.report({"WARNING"}, "No objects selected")
             return {"CANCELLED"}
-        # Get the location of the object's origin
-        obj_center = (
-            obj.location
-        )  # might have to do this according to vertex position average instead
 
-        # Create a new armature
-        bpy.ops.object.armature_add(enter_editmode=False, location=obj_center)
+        for obj in selected_objects:
+            if obj.type != "MESH":
+                self.report({"INFO"}, f"Skipped non-mesh object: {obj.name}")
+                continue
+            # Calculate the median point of all vertices
+            mesh = obj.data
+            median = mathutils.Vector((0, 0, 0))
+            for vertex in mesh.vertices:  # type: ignore
+                median += obj.matrix_world @ vertex.co  # Transform to world space
+            median /= len(mesh.vertices)  # type: ignore
+
+            # Create a new armature
+            bpy.ops.object.armature_add(enter_editmode=False, location=median)
 
         return {"FINISHED"}
 
@@ -38,7 +43,7 @@ class VIEW3D_PT_SimpleUIPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         layout.label(text="Add Bone Tools")
-        layout.operator(OBJECT_OT_add_bone.bl_idname, text="Add Bone at Center")
+        layout.operator(OBJECT_OT_add_bone.bl_idname, text="Add Bone at Median")
 
 
 def register():

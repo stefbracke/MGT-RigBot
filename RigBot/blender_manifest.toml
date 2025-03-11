@@ -61,7 +61,7 @@ platforms = ["windows-x64"]
 # [permissions]
 # network = "Need to sync motion-capture data to server"
 # files = "Import/export FBX from/to disk"
-clipboard = "Copy and paste bone transforms"
+clipboard = "Alternative Blender UI for rigging"
 
 # # Optional: advanced build settings.
 # # https://docs.blender.org/manual/en/dev/advanced/extensions/command_line_arguments.html#command-line-args-extension-build

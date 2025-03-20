@@ -30,8 +30,10 @@ class BONE_UL_list(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         # 'item' is a bone (bpy.types.Bone)
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
+            # Use a row with an operator to select the bone directly
             row = layout.row(align=True)
-            row.label(text=item.name, icon='BONE_DATA')
+            select_op = row.operator("object.select_bone", text=item.name, emboss=False)
+            select_op.bone_name = item.name  # Pass the bone name to the operator
             if item.parent:
                 # Display parent's name in a dimmed style.
                 row.label(text=f"(Parent: {item.parent.name})", icon='BLANK1')
@@ -39,11 +41,11 @@ class BONE_UL_list(bpy.types.UIList):
             layout.alignment = 'CENTER'
             layout.label(text="", icon='BONE_DATA')
 
-# Operator to select a bone – remains in Edit Mode
+# Operator to select a bone
 class OBJECT_OT_select_bone(bpy.types.Operator):
     bl_idname = "object.select_bone"
     bl_label = "Select Bone"
-    bl_description = "Selects the bone in the 3D Viewport (stays in Edit Mode)"
+    bl_description = "Selects the bone in the 3D Viewport"
 
     bone_name: bpy.props.StringProperty(
             name="Bone Name",
@@ -62,20 +64,33 @@ class OBJECT_OT_select_bone(bpy.types.Operator):
             self.report({'WARNING'}, f"Bone '{self.bone_name}' not found.")
             return {'CANCELLED'}
 
-        # Switch to Edit Mode and select the bone there
-        bpy.ops.object.mode_set(mode='EDIT')
-        for bone in armature.edit_bones:
-            bone.select = False
-        armature.edit_bones[self.bone_name].select = True
+        # Store the current mode
+        current_mode = context.object.mode
 
-        # Stay in Edit Mode; do not switch to Pose Mode.
+        # Select the bone based on the current mode
+        if current_mode == 'EDIT':
+            bpy.ops.object.mode_set(mode='EDIT')  # Ensure Edit Mode
+            for bone in armature.edit_bones:
+                bone.select = False
+            armature.edit_bones[self.bone_name].select = True
+        elif current_mode == 'POSE':
+            bpy.ops.object.mode_set(mode='POSE')  # Ensure Pose Mode
+            for bone in armature.bones:
+                bone.select = False
+            armature.bones[self.bone_name].select = True
+        else:
+            self.report({'WARNING'}, f"Unsupported mode: {current_mode}")
+            return {'CANCELLED'}
+
+        # Restore the previous mode
+        bpy.ops.object.mode_set(mode=current_mode)
         return {'FINISHED'}
 
 # Operator to rename a bone (popup for new name)
 class OBJECT_OT_rename_bone(bpy.types.Operator):
     bl_idname = "object.rename_bone"
     bl_label = "Rename Bone"
-    bl_description = "Rename the selected bone (stays in Edit Mode)"
+    bl_description = "Rename the selected bone."
 
     bone_name: bpy.props.StringProperty(
             name="Current Bone Name",
@@ -106,6 +121,7 @@ class OBJECT_OT_rename_bone(bpy.types.Operator):
         # Rename the bone in edit_bones.
         armature.edit_bones[self.bone_name].name = self.new_name
         self.report({'INFO'}, f"Bone renamed to '{self.new_name}'.")
+        
         return {'FINISHED'}
 
 # Panel for RigBot UI (foldable)
@@ -142,39 +158,15 @@ class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
             box.label(text="Bone List", icon='BONE_DATA')
             if context.active_object and context.active_object.type == 'ARMATURE':
                 box.template_list("BONE_UL_list", "", context.active_object.data, "bones", scene, "rigbot_bone_index", rows=5)
-                # Buttons to select and rename the active bone
+                # Rename button for the active bone
                 if 0 <= scene.rigbot_bone_index < len(context.active_object.data.bones):
                     active_bone = context.active_object.data.bones[scene.rigbot_bone_index]
-                    select_op = box.operator("object.select_bone", text="Select Bone")
-                    select_op.bone_name = active_bone.name
                     rename_op = box.operator("object.rename_bone", text="Rename Bone")
                     rename_op.bone_name = active_bone.name
             else:
                 box.label(text="No active armature.", icon='ERROR')
 
-            # Section: Viewport Display Options (collapsible)
-            layout.separator()
-            box = layout.box()
-            row = box.row(align=True)
-            arrow_icon_vp = 'TRIA_DOWN' if scene.rigbot_vp_display_expanded else 'TRIA_RIGHT'
-            row.prop(scene, "rigbot_vp_display_expanded", text="", icon=arrow_icon_vp, emboss=False)
-            row.label(text="Viewport Display Options", icon='HIDE_OFF')
-            if scene.rigbot_vp_display_expanded:
-                if context.active_object and context.active_object.type == 'ARMATURE':
-                    armature_data = context.active_object.data
-                    box.prop(armature_data, "display_type", text="Display As")
-                    box.prop(armature_data, "show_axes", text="Show Axes")
-                    box.prop(armature_data, "show_names", text="Show Names")
-                    box.prop(context.active_object, "show_in_front", text="Show In Front")
-                else:
-                    box.label(text="No active armature selected.", icon='ERROR')
-                # Header for Gizmo options
-                box.separator()
-                box.label(text="Gizmo Display", icon='ORIENTATION_GIMBAL')
-                if context.space_data:
-                    box.prop(context.space_data, "show_gizmo_object_translate", text="Show Move Gizmo")
-                    box.prop(context.space_data, "show_gizmo_object_rotate", text="Show Rotate Gizmo")
-            layout.separator()
+
 
         # New Section: Controller Creation (expandable)
         ctrl_header = layout.row(align=True)
@@ -186,6 +178,39 @@ class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
             ctrl_box.label(text="Controller Creation options will go here.", icon='INFO')
         layout.separator()
         layout.label(text="Hover over elements for tooltips.", icon='QUESTION')
+
+        # Section: Viewport Display Options (collapsible)
+        layout.separator()
+        box = layout.box()
+        row = box.row(align=True)
+        arrow_icon_vp = 'TRIA_DOWN' if scene.rigbot_vp_display_expanded else 'TRIA_RIGHT'
+        row.prop(scene, "rigbot_vp_display_expanded", text="", icon=arrow_icon_vp, emboss=False)
+        row.label(text="Viewport Display Options", icon='HIDE_OFF')
+        if scene.rigbot_vp_display_expanded:
+            if context.active_object and context.active_object.type == 'ARMATURE':
+                armature_data = context.active_object.data
+                box.prop(armature_data, "display_type", text="Display As")
+                box.prop(armature_data, "show_axes", text="Show Axes")
+                box.prop(armature_data, "show_names", text="Show Names")
+                box.prop(context.active_object, "show_in_front", text="Show In Front")
+            else:
+                box.label(text="No active armature selected.", icon='ERROR')
+            # Options specific to active bone
+            box.separator()
+            box.label(text="Active Bone Options", icon='BONE_DATA')
+            if context.active_bone:
+                box.prop(context.active_bone, "roll", text="Bone Roll")
+                # Display tail_radius only if display_type is 'ENVELOPE'
+                if context.object.data.display_type == 'ENVELOPE':
+                    box.prop(context.active_bone, "tail_radius", text="Bone Radius")
+            else:
+                box.label(text="No bone selected", icon='NONE')
+            # Gizmo options header
+            box.separator()
+            box.label(text="Gizmo Display", icon='ORIENTATION_GIMBAL')
+            if context.space_data:
+                box.prop(context.space_data, "show_gizmo_object_translate", text="Show Move Gizmo")
+        layout.separator()
 
 # Registration
 def register():

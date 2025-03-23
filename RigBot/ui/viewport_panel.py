@@ -14,16 +14,8 @@ class VIEW3D_PT_ViewportDisplayPanel(bpy.types.Panel):
         obj = context.active_object
         arm_data = obj.data if obj and obj.type == 'ARMATURE' else None
         active_bone = context.active_bone
-
         box = layout.box()
-        row = box.row(align=True)
-        arrow_icon_vp = 'TRIA_DOWN' if scene.rigbot_vp_display_expanded else 'TRIA_RIGHT'
-        row.prop(scene, "rigbot_vp_display_expanded", text="", icon=arrow_icon_vp, emboss=False)
-        row.label(text="Viewport Display Options", icon='HIDE_OFF') 
-        
-        if not scene.rigbot_vp_display_expanded:
-            return
-            
+
         if arm_data:
             box.prop(arm_data, "display_type", text="Display As")
             box.prop(arm_data, "show_axes", text="Show Axes")
@@ -51,12 +43,7 @@ class VIEW3D_PT_ViewportDisplayPanel(bpy.types.Panel):
 
 
 def register():
-    bpy.types.Scene.rigbot_vp_display_expanded = bpy.props.BoolProperty(
-            name="Expand Viewport Display Options", default=True,
-            description="Toggle display of viewport display options"
-    )
     bpy.utils.register_class(VIEW3D_PT_ViewportDisplayPanel)
 
 def unregister():
     bpy.utils.unregister_class(VIEW3D_PT_ViewportDisplayPanel)
-    del bpy.types.Scene.rigbot_vp_display_expanded

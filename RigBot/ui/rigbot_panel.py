@@ -94,6 +94,9 @@ def register():
             default='CIRCLE',
             description="Shape of the controller to create"
     )
+    # blender python 
+    # bpy.data.armatures['Armature'].bones['Bone.001'].color.palette
+    # bpy.data.objects['Armature'].pose.bones['Bone.001'].custom_shape
     bpy.types.Scene.rigbot_controller_color = bpy.props.FloatVectorProperty(
             name="Controller Color",
             subtype='COLOR',

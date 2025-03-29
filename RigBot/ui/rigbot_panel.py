@@ -86,12 +86,13 @@ def register():
     )
     bpy.types.Scene.rigbot_controller_shape = bpy.props.EnumProperty(
             items=[
-                ('BOX', "Box", "Create a box controller"),
-                ('CIRCLE', "Circle", "Create a circle controller"),
-                ('SQUARE', "Square", "Create a square controller"),
+                ('CUBE', "Cube", "Create a cube controller"),
+                ('CIRCLE', "Circle", "Create a circle controller (Not implemented in library yet)"),
+                ('SQUARE', "Square", "Create a square controller (Not implemented in library yet)"),
+                # Add more items here as library grows
             ],
             name="Controller Shape",
-            default='CIRCLE',
+            default='CUBE',
             description="Shape of the controller to create"
     )
     # blender python 

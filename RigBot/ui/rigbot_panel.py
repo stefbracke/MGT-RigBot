@@ -1,5 +1,19 @@
 import bpy
 
+# +++ Helper function +++
+def get_bone_color_items(self, context):
+    """Generates the item list for the Bone Color EnumProperty."""
+    items = []
+    # There are 20 standard theme color slots for Bone Groups
+    for i in range(1, 21):
+        identifier = f"GROUP_{i:02d}"  # Format: "GROUP_01", "GROUP_02", ...
+        name = f"Theme Color Slot {i}"
+        description = f"Assign Bone Color Theme Slot {i}"
+        # icon value can be added if needed, e.g., icon='COLOR'
+        items.append((identifier, name, description))
+    return items
+# ++++++++++++++++++++++++++++++
+
 class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
     bl_label = "RigBot"
     bl_idname = "VIEW3D_PT_RigBotPanel"
@@ -56,7 +70,7 @@ class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
             box.label(text="Controller Options", icon='INFO')
             col = box.column(align=True)
             col.prop(scene, "rigbot_controller_shape")
-            col.prop(scene, "rigbot_controller_color", text="") # Text is empty as the label is "Controller Color"
+            col.prop(scene, "rigbot_controller_color_choice")
             col.operator("object.place_controller", text="Place Controller")
             
 class BONE_UL_list(bpy.types.UIList):
@@ -72,6 +86,8 @@ class BONE_UL_list(bpy.types.UIList):
             layout.label(text="", icon='BONE_DATA')
 
 def register():
+    
+        
     bpy.types.Scene.rigbot_panel_expanded = bpy.props.BoolProperty(
             name="Expand RigBot Panel", default=True,
             description="Toggle display of the RigBot panel"
@@ -84,35 +100,45 @@ def register():
             name="Expand Controller Panel", default=True,
             description="Toggle display of controller creation options"
     )
+    bone_color_enum_items = []
+    for i in range(1, 21):
+        identifier = f"GROUP_{i:02d}"
+        name = f"Theme Color Slot {i}"
+        description = f"Assign Bone Color Theme Slot {i}"
+        bone_color_enum_items.append((identifier, name, description))
     bpy.types.Scene.rigbot_controller_shape = bpy.props.EnumProperty(
             items=[
                 ('CUBE', "Cube", "Create a cube controller"),
-                ('CIRCLE', "Circle", "Create a circle controller (Not implemented in library yet)"),
-                ('SQUARE', "Square", "Create a square controller (Not implemented in library yet)"),
-                # Add more items here as library grows
+                ('CIRCLE', "Circle", "Create a circle controller"),
+                ('PLANE', "Plane", "Create a plane controller"),
             ],
             name="Controller Shape",
             default='CUBE',
             description="Shape of the controller to create"
     )
+    bpy.types.Scene.rigbot_bone_color_choice = bpy.props.EnumProperty(
+            name="Bone Color",
+            description="Select a theme color slot for the bone(s)",
+            items=bone_color_enum_items,   # Use the static list defined above
+            default="GROUP_01"             # Use the string identifier as default
+    )
     # blender python 
     # bpy.data.armatures['Armature'].bones['Bone.001'].color.palette
     # bpy.data.objects['Armature'].pose.bones['Bone.001'].custom_shape
-    bpy.types.Scene.rigbot_controller_color = bpy.props.FloatVectorProperty(
-            name="Controller Color",
-            subtype='COLOR',
-            default=(0.8, 0.2, 0.2),  # Default to red
-            min=0.0, max=1.0,
-            description="Color of the controller"
-    )
+    
     bpy.utils.register_class(VIEW3D_PT_RigBotPanel)
     bpy.utils.register_class(BONE_UL_list)
 
 def unregister():
     bpy.utils.unregister_class(VIEW3D_PT_RigBotPanel)
     bpy.utils.unregister_class(BONE_UL_list)
-    del bpy.types.Scene.rigbot_panel_expanded
-    del bpy.types.Scene.rigbot_bone_index
-    del bpy.types.Scene.rigbot_ctrl_panel_expanded
-    del bpy.types.Scene.rigbot_controller_shape
-    del bpy.types.Scene.rigbot_controller_color
+    try: del bpy.types.Scene.rigbot_panel_expanded
+    except AttributeError: pass
+    try: del bpy.types.Scene.rigbot_bone_index
+    except AttributeError: pass
+    try: del bpy.types.Scene.rigbot_ctrl_panel_expanded
+    except AttributeError: pass
+    try: del bpy.types.Scene.rigbot_controller_shape
+    except AttributeError: pass
+    try: del bpy.types.Scene.rigbot_bone_color_choice
+    except AttributeError: pass

@@ -25,7 +25,7 @@ class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
         layout = self.layout
         scene = context.scene
 
-        # Skeleton Creation Panel
+        # --- Skeleton Creation Panel ---
         # Main header row for Skeleton Creation panel
         header_row_skeleton = layout.row(align=True)
         arrow_icon_skeleton = 'TRIA_DOWN' if scene.rigbot_panel_expanded else 'TRIA_RIGHT'
@@ -57,7 +57,7 @@ class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
 
         layout.separator()
 
-        # Controller Creation Panel
+        # --- Controller Creation Panel ---
         # Header row for Controller Creation panel
         header_row_controller = layout.row(align=True)
         arrow_icon_controller = 'TRIA_DOWN' if scene.rigbot_ctrl_panel_expanded else 'TRIA_RIGHT'
@@ -73,6 +73,42 @@ class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
             col.prop(scene, "rigbot_controller_color_choice")
             col.operator("object.place_controller", text="Place Controller")
             
+        layout.separator()
+        
+        # --- Constraints Panel ---
+        header_row_constraints = layout.row(align=True)
+        arrow_icon_constraints = 'TRIA_DOWN' if scene.rigbot_constraints_panel_expanded else 'TRIA_RIGHT'
+        header_row_constraints.prop(scene, "rigbot_constraints_panel_expanded", text="", icon=arrow_icon_constraints, emboss=False)
+        header_row_constraints.label(text="Constraints", icon='CONSTRAINT_BONE')
+
+        if scene.rigbot_constraints_panel_expanded:
+            box = layout.box()
+            box.label(text="Constraint options placeholder...")
+        
+        layout.separator()
+
+    # --- Skinning Panel ---
+        header_row_skinning = layout.row(align=True)
+        arrow_icon_skinning = 'TRIA_DOWN' if scene.rigbot_skinning_panel_expanded else 'TRIA_RIGHT'
+        header_row_skinning.prop(scene, "rigbot_skinning_panel_expanded", text="", icon=arrow_icon_skinning, emboss=False)
+        header_row_skinning.label(text="Skinning", icon='MOD_MESHDEFORM')
+        
+        if scene.rigbot_skinning_panel_expanded:
+            box = layout.box()
+            box.label(text="Skinning options placeholder...")
+            
+        layout.separator()
+            
+        # --- Posing Panel ---
+        header_row_posing = layout.row(align=True)
+        arrow_icon_posing = 'TRIA_DOWN' if scene.rigbot_posing_panel_expanded else 'TRIA_RIGHT'
+        header_row_posing.prop(scene, "rigbot_posing_panel_expanded", text="", icon=arrow_icon_posing, emboss=False)
+        header_row_posing.label(text="Posing", icon='POSE_HLT')
+        
+        if scene.rigbot_posing_panel_expanded:
+            box = layout.box()
+            box.label(text="Posing options placeholder...")
+            
 class BONE_UL_list(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
@@ -86,8 +122,6 @@ class BONE_UL_list(bpy.types.UIList):
             layout.label(text="", icon='BONE_DATA')
 
 def register():
-    
-        
     bpy.types.Scene.rigbot_panel_expanded = bpy.props.BoolProperty(
             name="Expand RigBot Panel", default=True,
             description="Toggle display of the RigBot panel"
@@ -122,23 +156,41 @@ def register():
             items=bone_color_enum_items,   # Use the static list defined above
             default="GROUP_01"             # Use the string identifier as default
     )
+    bpy.types.Scene.rigbot_constraints_panel_expanded = bpy.props.BoolProperty(
+            name="Expand Constraints Panel", default=True,
+            description="Toggle display of the Constraints panel"
+    )
+    bpy.types.Scene.rigbot_skinning_panel_expanded = bpy.props.BoolProperty(
+            name="Expand Skinning Panel", default=True,
+            description="Toggle display of the Skinning panel"
+    )
+    bpy.types.Scene.rigbot_posing_panel_expanded = bpy.props.BoolProperty(
+            name="Expand Posing Panel", default=True,
+            description="Toggle display of the Posing panel"
+    )
     # blender python 
     # bpy.data.armatures['Armature'].bones['Bone.001'].color.palette
     # bpy.data.objects['Armature'].pose.bones['Bone.001'].custom_shape
-    
     bpy.utils.register_class(VIEW3D_PT_RigBotPanel)
     bpy.utils.register_class(BONE_UL_list)
 
 def unregister():
     bpy.utils.unregister_class(VIEW3D_PT_RigBotPanel)
     bpy.utils.unregister_class(BONE_UL_list)
-    try: del bpy.types.Scene.rigbot_panel_expanded
-    except AttributeError: pass
-    try: del bpy.types.Scene.rigbot_bone_index
-    except AttributeError: pass
-    try: del bpy.types.Scene.rigbot_ctrl_panel_expanded
-    except AttributeError: pass
-    try: del bpy.types.Scene.rigbot_controller_shape
-    except AttributeError: pass
-    try: del bpy.types.Scene.rigbot_bone_color_choice
-    except AttributeError: pass
+
+    properties_to_delete = [
+        "rigbot_panel_expanded",
+        "rigbot_bone_index",
+        "rigbot_ctrl_panel_expanded",
+        "rigbot_controller_shape",
+        "rigbot_bone_color_choice",
+        "rigbot_constraints_panel_expanded",
+        "rigbot_skinning_panel_expanded",
+        "rigbot_posing_panel_expanded"
+    ]
+
+    for property_name in properties_to_delete:
+        try:
+            delattr(bpy.types.Scene, property_name)
+        except AttributeError:
+            pass

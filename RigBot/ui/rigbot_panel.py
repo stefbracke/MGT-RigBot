@@ -27,16 +27,6 @@ class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
                 box.label(text="Bone Creation", icon='OUTLINER_OB_ARMATURE')
                 col = box.column(align=True)
                 col.operator("object.add_initial_bone", text="Add Initial Bone", icon='BONE_DATA')
-            
-            # Section: Armature Editing & Snapping Tools (Visible if an armature is selected)
-            box_edit = layout.box()
-            col_edit = box_edit.column(align=True)
-
-            # Determine icon based on mode
-            toggle_icon = 'OBJECT_DATAMODE' if obj and obj.mode == 'EDIT' else 'EDITMODE_HLT'
-            col_edit.operator("object.editmode_toggle", text="Toggle Edit Mode", icon=toggle_icon)
-            col_edit.operator("view3d.snap_cursor_to_selected", text="Cursor to Selected", icon='CURSOR')
-            col_edit.operator("view3d.snap_selected_to_cursor", text="Selection to Cursor", icon='RESTRICT_SELECT_OFF').use_offset = False # Set use_offset=False here
 
             # Section: Bone List (Outliner View using UIList) - Shown when armature is active
             if context.active_object and context.active_object.type == 'ARMATURE':
@@ -60,7 +50,23 @@ class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
 
         if scene.rigbot_skinning_panel_expanded:
             box = layout.box()
-            box.label(text="Skinning options placeholder...")
+            col = box.column(align=True)
+
+            # Parent to Bone button
+            parent_op = col.operator(
+                    "object.parent_set",
+                    text="Parent to Bone",
+                    icon='BONE_DATA' # Or 'CONSTRAINT_BONE' or 'LINKED'
+            )
+            parent_op.type = 'BONE' # Set the parenting type
+            
+            # Clear Parent button
+            clear_parent_op = col.operator(
+                    "object.parent_clear",
+                    text="Clear Parent (Keep Transform)",
+                    icon='X'
+            )
+            clear_parent_op.type = 'CLEAR_KEEP_TRANSFORM'
 
         layout.separator()
         

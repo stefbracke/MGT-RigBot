@@ -17,11 +17,7 @@ class OBJECT_OT_add_initial_bone(bpy.types.Operator):
             obj.data.show_names = True
             obj.show_in_front = True
 
-        if context.space_data:
-            context.space_data.show_gizmo_object_translate = True
-            context.space_data.show_gizmo_object_rotate = True
-
-        self.report({'INFO'}, "Initial bone added with viewport display options and gizmos enabled, and Edit Mode activated")
+        self.report({'INFO'}, "Initial bone added with viewport display options enabled.")
         return {'FINISHED'}
 
 def register():

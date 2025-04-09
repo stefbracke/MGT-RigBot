@@ -17,7 +17,7 @@ class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
         header_row_skeleton = layout.row(align=True)
         arrow_icon_skeleton = 'TRIA_DOWN' if scene.rigbot_panel_expanded else 'TRIA_RIGHT'
         header_row_skeleton.prop(scene, "rigbot_panel_expanded", text="", icon=arrow_icon_skeleton, emboss=False)
-        header_row_skeleton.label(text="Skeleton Creation", icon='ARMATURE_DATA')
+        header_row_skeleton.label(text="Skeleton", icon='ARMATURE_DATA')
 
         # Draw Skeleton Creation content only if expanded
         if scene.rigbot_panel_expanded:
@@ -35,10 +35,7 @@ class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
                 box_list.label(text="Bone List", icon='BONE_DATA')
                 box_list.template_list("BONE_UL_list", "", context.active_object.data, "bones", scene, "rigbot_bone_index", rows=5)
                 # Rename button for the active bone
-                if 0 <= scene.rigbot_bone_index < len(context.active_object.data.bones):
-                    active_bone = context.active_object.data.bones[scene.rigbot_bone_index]
-                    rename_op = box_list.operator("object.rename_bone", text="Rename Bone")
-                    rename_op.bone_name = active_bone.name
+                box_list.operator("object.rename_bone", text="Rename Active Bone")
 
         layout.separator()
 
@@ -90,14 +87,24 @@ class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
         
         if scene.rigbot_posing_panel_expanded:
             box = layout.box()
-            box.label(text="Posing options placeholder...")
-            
+            col = box.column(align=True) # Use a column for layout
+
+            col.operator("pose.reset_location", text="Reset Location", icon='CON_LOCLIKE') # Use a suitable icon
+            col.operator("pose.reset_rotation", text="Reset Rotation", icon='CON_ROTLIKE') # Use a suitable icon
+            col.operator("pose.reset_scale", text="Reset Scale", icon='CON_SIZELIKE') # Use a suitable icon
+
+            col.separator() # Add a separator for visual clarity
+
+            col.operator("pose.reset_transforms", text="Reset Transforms", icon='FILE_REFRESH')
+
+
 class BONE_UL_list(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
             row = layout.row(align=True)
             select_op = row.operator("object.select_bone", text=item.name, emboss=False)
             select_op.bone_name = item.name
+            
             if item.parent:
                 row.label(text=f"(Parent: {item.parent.name})", icon='BLANK1')
         elif self.layout_type in {'GRID'}:
@@ -110,7 +117,7 @@ def register():
             description="Toggle display of the RigBot panel"
     )
     bpy.types.Scene.rigbot_bone_index = bpy.props.IntProperty(
-            name="Bone Index", default=0,
+            name="Bone Index", default=-1,
             description="Active bone index in the RigBot Bone List"
     )
     bpy.types.Scene.rigbot_constraints_panel_expanded = bpy.props.BoolProperty(

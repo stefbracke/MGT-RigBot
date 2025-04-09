@@ -1,10 +1,13 @@
-from . import skeleton_creation
-from . import bone_operators
+from . import skeleton
+from . import bone
+from . import pose
 
 def register():
-    skeleton_creation.register()
-    bone_operators.register()
+    skeleton.register()
+    bone.register()
+    pose.register()
 
 def unregister():
-    skeleton_creation.unregister()
-    bone_operators.unregister()
+    pose.unregister()
+    bone.unregister()
+    skeleton.unregister()

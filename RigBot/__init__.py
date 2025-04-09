@@ -4,6 +4,7 @@ from . import operators
 from . import ui
 
 addon_keymaps = []
+
 def register_keymaps():
     wm = bpy.context.window_manager
     kc = wm.keyconfigs.addon # Use addon keyconfig to avoid conflicts
@@ -11,17 +12,18 @@ def register_keymaps():
         print("Warning: Addon keyconfig not found.") # Should not happen usually
         return
 
-    # Keymap for 3D View Generic
-    km = kc.keymaps.new(name='3D View Generic', space_type='VIEW_3D')
+    # # Keymap for 3D View Generic
+    # km = kc.keymaps.new(name='3D View Generic', space_type='VIEW_3D')
+    # 
+    # Keymap for Object-Non-modal
+    km = kc.keymaps.new(name='3D View', space_type='VIEW_3D')
 
     # Add the Pie Menu keymap item
-    # Assign to Shift+D - CHANGE THIS ('D', shift=True) TO YOUR PREFERRED HOTKEY
     keymap_item = km.keymap_items.new(
             idname='wm.call_menu_pie', # Operator to call a pie menu
-            type='Q',                  # Key type
-            value='PRESS',             # Trigger on press
-            shift=True                 # Require Shift modifier
-            # Add ctrl=True or alt=True if needed
+            type='Q',
+            value='PRESS',
+            shift=True,
     )
     # Tell the operator which pie menu to call by its bl_idname
     keymap_item.properties.name = ui.pie_menu.VIEW3D_MT_RigBotEditPie.bl_idname

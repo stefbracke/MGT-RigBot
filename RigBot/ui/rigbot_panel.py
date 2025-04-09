@@ -1,19 +1,5 @@
 import bpy
 
-# +++ Helper function +++
-def get_bone_color_items(self, context):
-    """Generates the item list for the Bone Color EnumProperty."""
-    items = []
-    # There are 20 standard theme color slots for Bone Groups
-    for i in range(1, 21):
-        identifier = f"GROUP_{i:02d}"  # Format: "GROUP_01", "GROUP_02", ...
-        name = f"Theme Color Slot {i}"
-        description = f"Assign Bone Color Theme Slot {i}"
-        # icon value can be added if needed, e.g., icon='COLOR'
-        items.append((identifier, name, description))
-    return items
-# ++++++++++++++++++++++++++++++
-
 class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
     bl_label = "RigBot"
     bl_idname = "VIEW3D_PT_RigBotPanel"
@@ -24,6 +10,7 @@ class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         scene = context.scene
+        obj = context.active_object
 
         # --- Skeleton Creation Panel ---
         # Main header row for Skeleton Creation panel
@@ -34,45 +21,47 @@ class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
 
         # Draw Skeleton Creation content only if expanded
         if scene.rigbot_panel_expanded:
-            # Section: Bone Creation (only visible if no armature is active)
-            if not (context.active_object and context.active_object.type == 'ARMATURE'):
+            # Section: Bone Creation (Visible if no Armature is active)
+            if not (obj and obj.type == 'ARMATURE'):
                 box = layout.box()
                 box.label(text="Bone Creation", icon='OUTLINER_OB_ARMATURE')
                 col = box.column(align=True)
                 col.operator("object.add_initial_bone", text="Add Initial Bone", icon='BONE_DATA')
+            
+            # Section: Armature Editing & Snapping Tools (Visible if an armature is selected)
+            box_edit = layout.box()
+            col_edit = box_edit.column(align=True)
 
-            # Section: Bone List (Outliner View using UIList)
-            layout.separator()
-            box = layout.box()
-            box.label(text="Bone List", icon='BONE_DATA')
+            # Determine icon based on mode
+            toggle_icon = 'OBJECT_DATAMODE' if obj and obj.mode == 'EDIT' else 'EDITMODE_HLT'
+            col_edit.operator("object.editmode_toggle", text="Toggle Edit Mode", icon=toggle_icon)
+            col_edit.operator("view3d.snap_cursor_to_selected", text="Cursor to Selected", icon='CURSOR')
+            col_edit.operator("view3d.snap_selected_to_cursor", text="Selection to Cursor", icon='RESTRICT_SELECT_OFF').use_offset = False # Set use_offset=False here
+
+            # Section: Bone List (Outliner View using UIList) - Shown when armature is active
             if context.active_object and context.active_object.type == 'ARMATURE':
-                box.template_list("BONE_UL_list", "", context.active_object.data, "bones", scene, "rigbot_bone_index", rows=5)
+                layout.separator()
+                box_list = layout.box()
+                box_list.label(text="Bone List", icon='BONE_DATA')
+                box_list.template_list("BONE_UL_list", "", context.active_object.data, "bones", scene, "rigbot_bone_index", rows=5)
                 # Rename button for the active bone
                 if 0 <= scene.rigbot_bone_index < len(context.active_object.data.bones):
                     active_bone = context.active_object.data.bones[scene.rigbot_bone_index]
-                    rename_op = box.operator("object.rename_bone", text="Rename Bone")
+                    rename_op = box_list.operator("object.rename_bone", text="Rename Bone")
                     rename_op.bone_name = active_bone.name
-            else:
-                box.label(text="No active armature.", icon='ERROR')
 
         layout.separator()
 
-        # --- Controller Creation Panel ---
-        # Header row for Controller Creation panel
-        header_row_controller = layout.row(align=True)
-        arrow_icon_controller = 'TRIA_DOWN' if scene.rigbot_ctrl_panel_expanded else 'TRIA_RIGHT'
-        header_row_controller.prop(scene, "rigbot_ctrl_panel_expanded", text="", icon=arrow_icon_controller, emboss=False)
-        header_row_controller.label(text="Controller Creation Options", icon='DRIVER')
+        # --- Skinning Panel ---
+        header_row_skinning = layout.row(align=True)
+        arrow_icon_skinning = 'TRIA_DOWN' if scene.rigbot_skinning_panel_expanded else 'TRIA_RIGHT'
+        header_row_skinning.prop(scene, "rigbot_skinning_panel_expanded", text="", icon=arrow_icon_skinning, emboss=False)
+        header_row_skinning.label(text="Skinning", icon='MOD_MESHDEFORM')
 
-        # Draw Controller Creation content only if expanded
-        if scene.rigbot_ctrl_panel_expanded:
+        if scene.rigbot_skinning_panel_expanded:
             box = layout.box()
-            box.label(text="Controller Options", icon='INFO')
-            col = box.column(align=True)
-            col.prop(scene, "rigbot_controller_shape")
-            col.prop(scene, "rigbot_controller_color_choice")
-            col.operator("object.place_controller", text="Place Controller")
-            
+            box.label(text="Skinning options placeholder...")
+
         layout.separator()
         
         # --- Constraints Panel ---
@@ -85,18 +74,6 @@ class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
             box = layout.box()
             box.label(text="Constraint options placeholder...")
         
-        layout.separator()
-
-    # --- Skinning Panel ---
-        header_row_skinning = layout.row(align=True)
-        arrow_icon_skinning = 'TRIA_DOWN' if scene.rigbot_skinning_panel_expanded else 'TRIA_RIGHT'
-        header_row_skinning.prop(scene, "rigbot_skinning_panel_expanded", text="", icon=arrow_icon_skinning, emboss=False)
-        header_row_skinning.label(text="Skinning", icon='MOD_MESHDEFORM')
-        
-        if scene.rigbot_skinning_panel_expanded:
-            box = layout.box()
-            box.label(text="Skinning options placeholder...")
-            
         layout.separator()
             
         # --- Posing Panel ---
@@ -130,32 +107,6 @@ def register():
             name="Bone Index", default=0,
             description="Active bone index in the RigBot Bone List"
     )
-    bpy.types.Scene.rigbot_ctrl_panel_expanded = bpy.props.BoolProperty(
-            name="Expand Controller Panel", default=True,
-            description="Toggle display of controller creation options"
-    )
-    bone_color_enum_items = []
-    for i in range(1, 21):
-        identifier = f"GROUP_{i:02d}"
-        name = f"Theme Color Slot {i}"
-        description = f"Assign Bone Color Theme Slot {i}"
-        bone_color_enum_items.append((identifier, name, description))
-    bpy.types.Scene.rigbot_controller_shape = bpy.props.EnumProperty(
-            items=[
-                ('CUBE', "Cube", "Create a cube controller"),
-                ('CIRCLE', "Circle", "Create a circle controller"),
-                ('PLANE', "Plane", "Create a plane controller"),
-            ],
-            name="Controller Shape",
-            default='CUBE',
-            description="Shape of the controller to create"
-    )
-    bpy.types.Scene.rigbot_bone_color_choice = bpy.props.EnumProperty(
-            name="Bone Color",
-            description="Select a theme color slot for the bone(s)",
-            items=bone_color_enum_items,   # Use the static list defined above
-            default="GROUP_01"             # Use the string identifier as default
-    )
     bpy.types.Scene.rigbot_constraints_panel_expanded = bpy.props.BoolProperty(
             name="Expand Constraints Panel", default=True,
             description="Toggle display of the Constraints panel"
@@ -168,9 +119,7 @@ def register():
             name="Expand Posing Panel", default=True,
             description="Toggle display of the Posing panel"
     )
-    # blender python 
-    # bpy.data.armatures['Armature'].bones['Bone.001'].color.palette
-    # bpy.data.objects['Armature'].pose.bones['Bone.001'].custom_shape
+    
     bpy.utils.register_class(VIEW3D_PT_RigBotPanel)
     bpy.utils.register_class(BONE_UL_list)
 
@@ -181,9 +130,6 @@ def unregister():
     properties_to_delete = [
         "rigbot_panel_expanded",
         "rigbot_bone_index",
-        "rigbot_ctrl_panel_expanded",
-        "rigbot_controller_shape",
-        "rigbot_bone_color_choice",
         "rigbot_constraints_panel_expanded",
         "rigbot_skinning_panel_expanded",
         "rigbot_posing_panel_expanded"

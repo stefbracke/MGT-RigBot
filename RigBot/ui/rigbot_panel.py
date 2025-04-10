@@ -11,7 +11,7 @@ class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
         layout = self.layout
         scene = context.scene
         obj = context.active_object
-
+            
         # --- Skeleton Creation Panel ---
         # Main header row for Skeleton Creation panel
         header_row_skeleton = layout.row(align=True)
@@ -48,12 +48,19 @@ class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
         if scene.rigbot_skinning_panel_expanded:
             box = layout.box()
             col = box.column(align=True)
+            
+            col.label(text="Object Parenting:")
+            col.operator("rigbot.armature_parent_keep_offset", text="Parent Bone to Bone (Keep Offset)", icon='LINKED')
+            
+            # --- Parent by Name ---
+            col.operator("object.parent_by_name", text="Parent by Name", icon='AUTOMERGE_ON')
+            col.separator() 
 
             # Parent to Bone button
             parent_op = col.operator(
                     "object.parent_set",
-                    text="Parent to Bone",
-                    icon='BONE_DATA' # Or 'CONSTRAINT_BONE' or 'LINKED'
+                    text="Skin Mesh to Bone",
+                    icon='CONSTRAINT_BONE' # Or 'CONSTRAINT_BONE' or 'LINKED'
             )
             parent_op.type = 'BONE' # Set the parenting type
             
@@ -75,8 +82,69 @@ class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
 
         if scene.rigbot_constraints_panel_expanded:
             box = layout.box()
-            box.label(text="Constraint options placeholder...")
-        
+            col = box.column(align=True)
+            # Add Damped Track Constraint
+            col.operator(
+                    "rigbot.pose_add_damped_track_self",
+                    text="Add Damped Track (Target Self)",
+                    icon='CON_TRACKTO'
+            )
+            # Add Stretch To Constraint
+            col.operator(
+                    "rigbot.pose_add_stretch_to",
+                    text="Add Stretch To",
+                    icon='CON_STRETCHTO'
+            )
+            
+            # --- Display Existing Constraints ---
+            pbone = context.active_pose_bone # Get the active pose bone
+
+            # Check if in pose mode and a pose bone is active
+            if context.mode == 'POSE' and pbone:
+                if not pbone.constraints:
+                    box.label(text="Active bone has no constraints.", icon='INFO')
+                else:
+                    # Iterate through constraints of the active pose bone
+                    for constraint in pbone.constraints:
+                        # Create a sub-box for each constraint for better organization
+                        constraint_box = box.box()
+                        # Allow expanding/collapsing constraint details
+                        constraint_box.prop(constraint, "show_expanded", text=constraint.name, icon='CON_TRACKTO')
+
+                        if constraint.show_expanded:
+                            # Use layout.prop() with the constraint object and its property name (data path)
+                            # The data paths you provided are attributes of the constraint object itself.
+
+                            # Common Constraint Properties
+                            constraint_box.prop(constraint, "name", text="Name") # pose.bones[...].constraints[...].name
+                            constraint_box.prop(constraint, "target", text="Target") # pose.bones[...].constraints[...].target
+                            # Subtarget Property (Requires prop_search)
+                            # Check if the constraint type *has* a subtarget (like Damped Track, IK, etc.)
+                            if hasattr(constraint, "subtarget"):
+                                constraint_box.prop_search(
+                                        constraint,              # The constraint object
+                                        "subtarget",             # The property name (data path)
+                                        constraint.target.data,  # Search within the target armature's data
+                                        "bones",                 # Search within the 'bones' collection
+                                        text="Bone"              # Label for the UI element
+                                ) # pose.bones[...].constraints[...].subtarget
+                            constraint_box.prop(constraint, "head_tail", text="Head/Tail") # pose.bones[...].constraints[...].head_tail
+                            # Constraint-Specific Properties (Example: Damped Track)
+                            if constraint.type == 'DAMPED_TRACK':
+                                constraint_box.prop(constraint, "track_axis") # pose.bones[...].constraints[...].track_axis
+                                constraint_box.prop(constraint, "influence", slider=True)
+                            elif constraint.type == 'STRETCH_TO':
+                                constraint_box.prop(constraint, "rest_length")
+                                constraint_box.prop(constraint, "bulge")
+                                constraint_box.prop(constraint, "volume")
+                                constraint_box.prop(constraint, "keep_axis")
+                                constraint_box.prop(constraint, "influence", slider=True)
+            elif context.mode != 'POSE':
+                box.label(text="Switch to Pose Mode to see constraints.", icon='INFO')
+            elif not pbone:
+                box.label(text="Select a Bone to see its constraints.", icon='INFO')
+
+
         layout.separator()
             
         # --- Posing Panel ---

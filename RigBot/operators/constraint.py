@@ -89,8 +89,7 @@ class RIGBOT_OT_pose_add_stretch_to(bpy.types.Operator):
 
                 # Verify it's the correct type
                 if new_constraint.type == 'STRETCH_TO':
-                    # You could set a default target here if needed, e.g.:
-                    # new_constraint.target = armature_obj
+                    new_constraint.target = armature_obj
                     self.report({'INFO'}, f"Added Stretch To constraint to '{active_pose_bone.name}'.")
                     return {'FINISHED'}
                 else:
@@ -103,10 +102,65 @@ class RIGBOT_OT_pose_add_stretch_to(bpy.types.Operator):
         except RuntimeError as e:
             self.report({'ERROR'}, f"Failed to add Stretch To constraint: {e}")
             return {'CANCELLED'}
+
+class RIGBOT_OT_pose_add_ik(bpy.types.Operator):
+    """Adds an Inverse Kinematics (IK) constraint to the active pose bone"""
+    bl_idname = "rigbot.pose_add_ik"
+    bl_label = "Add IK Constraint"
+    bl_description = "Add an Inverse Kinematics (IK) constraint to the active pose bone"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        # Requires Pose Mode, an active object that is an armature, and an active pose bone
+        return (context.mode == 'POSE' and
+                context.object and
+                context.object.type == 'ARMATURE' and
+                context.active_pose_bone is not None)
+
+    def execute(self, context):
+        active_pose_bone = context.active_pose_bone
+
+        if not active_pose_bone:
+            self.report({'WARNING'}, "No active pose bone selected.")
+            return {'CANCELLED'}
+
+        # Add the constraint
+        try:
+            constraint_count = len(active_pose_bone.constraints)
+            bpy.ops.pose.constraint_add(type='IK')
+
+            # Check if a new constraint was actually added
+            if len(active_pose_bone.constraints) > constraint_count:
+                new_constraint = active_pose_bone.constraints[-1] # Get the last added constraint
+
+                # Verify it's the correct type
+                if new_constraint.type == 'IK':
+                    # --- Set some common default values ---
+                    new_constraint.chain_count = 0 # Default to full chain length
+                    new_constraint.use_tail = True  # Often desired for IK
+                    # Targets (target, pole_target) usually need manual assignment
+                    # --- End Defaults ---
+
+                    self.report({'INFO'}, f"Added IK constraint to '{active_pose_bone.name}'.")
+                    return {'FINISHED'}
+                else:
+                    self.report({'WARNING'}, f"Added constraint was not IK (Type: {new_constraint.type}).")
+                    # Optionally remove the wrongly added constraint:
+                    # active_pose_bone.constraints.remove(new_constraint)
+                    return {'CANCELLED'}
+            else:
+                self.report({'WARNING'}, "IK constraint could not be added.")
+                return {'CANCELLED'}
+
+        except RuntimeError as e:
+            self.report({'ERROR'}, f"Failed to add IK constraint: {e}")
+            return {'CANCELLED'}
         
 classes = (
     RIGBOT_OT_pose_add_damped_track_self,
     RIGBOT_OT_pose_add_stretch_to,
+    RIGBOT_OT_pose_add_ik,
 )
 
 def register():

@@ -95,6 +95,12 @@ class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
                     text="Add Stretch To",
                     icon='CON_STRETCHTO'
             )
+            # Add Inverse Kinematics
+            col.operator(
+                    "rigbot.pose_add_ik",
+                    text="Add Inverse Kinematics",
+                    icon='CON_KINEMATIC'
+            )
             
             # --- Display Existing Constraints ---
             pbone = context.active_pose_bone # Get the active pose bone
@@ -121,13 +127,14 @@ class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
                             # Subtarget Property (Requires prop_search)
                             # Check if the constraint type *has* a subtarget (like Damped Track, IK, etc.)
                             if hasattr(constraint, "subtarget"):
-                                constraint_box.prop_search(
-                                        constraint,              # The constraint object
-                                        "subtarget",             # The property name (data path)
-                                        constraint.target.data,  # Search within the target armature's data
-                                        "bones",                 # Search within the 'bones' collection
-                                        text="Bone"              # Label for the UI element
-                                ) # pose.bones[...].constraints[...].subtarget
+                                if constraint.target:
+                                    constraint_box.prop_search(
+                                            constraint,              # The constraint object
+                                            "subtarget",             # The property name (data path)
+                                            constraint.target.data,  # Search within the target armature's data
+                                            "bones",                 # Search within the 'bones' collection
+                                            text="Bone"              # Label for the UI element
+                                    ) # pose.bones[...].constraints[...].subtarget
                             constraint_box.prop(constraint, "head_tail", text="Head/Tail") # pose.bones[...].constraints[...].head_tail
                             # Constraint-Specific Properties (Example: Damped Track)
                             if constraint.type == 'DAMPED_TRACK':
@@ -139,6 +146,30 @@ class VIEW3D_PT_RigBotPanel(bpy.types.Panel):
                                 constraint_box.prop(constraint, "volume")
                                 constraint_box.prop(constraint, "keep_axis")
                                 constraint_box.prop(constraint, "influence", slider=True)
+                            # --- ADD THIS ELIF BLOCK for IK ---
+                            elif constraint.type == 'IK':
+                                # constraint_box.prop(constraint, "pole_target", text="Pole Target")
+                                # if constraint.pole_target and constraint.pole_target.type == 'ARMATURE':
+                                #     constraint_box.prop_search(
+                                #             constraint,              # The constraint object
+                                #             "pole_subtarget",        # The property name for pole bone
+                                #             constraint.pole_target.data, # Search within the pole target armature's data
+                                #             "bones",                 # Search within the 'bones' collection
+                                #             text="Pole Bone"         # Label for the UI element
+                                #     )
+                                # constraint_box.prop(constraint, "pole_angle", text="Pole Angle") # Often useful with pole target
+                                # constraint_box.separator()
+                                # constraint_box.prop(constraint, "iterations")
+                                constraint_box.prop(constraint, "chain_count", text="Chain Length") # Use chain_count for length
+                                # constraint_box.prop(constraint, "use_tail")
+                                # constraint_box.prop(constraint, "use_stretch")
+                                # constraint_box.separator()
+                                # constraint_box.label(text="Weighting:") # Header for weights
+                                # constraint_box.prop(constraint, "weight", text="Position") # weight controls position
+                                # constraint_box.prop(constraint, "orient_weight", text="Rotation") # orient_weight controls rotation
+                                # constraint_box.separator()
+                                constraint_box.prop(constraint, "influence", slider=True)
+                            # --- END OF ADDED IK BLOCK ---
             elif context.mode != 'POSE':
                 box.label(text="Switch to Pose Mode to see constraints.", icon='INFO')
             elif not pbone:

@@ -1,13 +1,19 @@
-from . import skeleton_creation
-from . import bone_operators
-from . import controller_creation
+from . import skeleton
+from . import bone
+from . import pose
+from . import skinning
+from . import constraint
 
 def register():
-    skeleton_creation.register()
-    bone_operators.register()
-    controller_creation.register()
+    skeleton.register()
+    bone.register()
+    pose.register()
+    skinning.register()
+    constraint.register()
 
 def unregister():
-    skeleton_creation.unregister()
-    bone_operators.unregister()
-    controller_creation.unregister()
+    constraint.unregister()
+    skinning.unregister()
+    pose.unregister()
+    bone.unregister()
+    skeleton.unregister()
